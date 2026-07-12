@@ -1,0 +1,104 @@
+version: 1
+
+ignore:
+  - "**/*_test.go"
+
+rules:
+  - path: "cmd/golangarch-lint"
+    mode: flat
+    allow-funcs: none
+    allow-types: local
+    allow-vars: local
+    exclude-funcs: ["main"]
+    modules:
+      - "$module/internal/dto"
+      - "$module/internal/config"
+      - "$module/internal/controller"
+
+  - path: "internal/dto"
+    mode: flat
+    allow-funcs: none
+    allow-types: exported
+    allow-vars: none
+    modules: []
+
+  - path: "internal/helpers"
+    mode: flat
+    allow-types: none
+    allow-vars: local
+    allow-funcs: exported
+    modules: []
+
+  - path: "internal/config"
+    allow-types: none
+    allow-vars: none
+    allow-funcs: none
+    require-receiver: all
+    exclude-funcs: ["Load", "Validate"]
+    mode: flat
+    modules:
+      - "$module/internal/helpers"
+      - "gopkg.in/yaml.v3"
+
+  - path: "internal/config/config.go"
+    exclude-types: ["Config"]
+    modules: []
+
+  - path: "internal/config/errors.go"
+    exclude-vars: ["Err*"]
+    modules: []
+
+  - path: "internal/controller"
+    mode: flat
+    allow-types: none
+    allow-vars: none
+    allow-funcs: exported
+    require-receiver: all
+    modules:
+      - "$module/internal/dto"
+
+  - path: "internal/controller/package.go"
+    allow-types: local
+    allow-vars: local
+    allow-funcs: local
+    exclude-types: ["Controller"]
+    exclude-vars: ["Err*"]
+    exclude-funcs: ["New"]
+    exported:
+      inputs: ["$module/internal/dto", "$module/internal/config"]
+      outputs: []
+    modules:
+      - "$module/internal/dto"
+      - "$module/internal/config"
+      - "$module/internal/services/**"
+
+  - path: "internal/services"
+    mode: subdirs-only
+
+  - path: "internal/services/*"
+    mode: flat
+    allow-types: none
+    allow-vars: none
+    allow-funcs: all
+    require-receiver: all
+    exported:
+      inputs: ["$module/internal/dto"]
+      outputs: ["$module/internal/dto"]
+    modules:
+      - "$module/internal/dto"
+      - "$module/internal/helpers"
+      - "golang.org/x/tools/**"
+
+  - path: "internal/services/*/package.go"
+    allow-types: local
+    allow-vars: local
+    allow-funcs: local
+    exclude-types: ["Service"]
+    exclude-vars: ["Err*"]
+    exclude-funcs: ["New"]
+    exported:
+      inputs: ["$module/internal/dto", "$module/internal/config"]
+      outputs: []
+    modules:
+      - "$module/internal/dto"
+      - "$module/internal/config"
