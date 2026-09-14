@@ -27,6 +27,7 @@ One `rules` array in `.golangarch.yml`. Every field is optional except `path`. `
 |-------|---------|
 | `path` | glob over directories or file paths; file rules win over directory rules |
 | `ignore` | per-rule path globs to skip |
+| `file-binding` | file organization: `name` (default), `type` (type and its receiver methods together) |
 | `mode` | directory shape: `any`, `flat` (no subdirs), `subdirs-only` (no files) |
 | `allow-types` / `allow-vars` / `allow-funcs` | which declarations may exist: `all` (default), `local`, `exported`, `none` |
 | `exclude-types` / `exclude-vars` / `exclude-funcs` | name globs exempt from all AST checks |

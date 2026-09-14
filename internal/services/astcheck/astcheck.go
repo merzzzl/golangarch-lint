@@ -268,6 +268,23 @@ func (s *Service) astCheckBindToFile(
 	fileName := filepath.Base(rel)
 	normFile := helpers.Normalize(fileName)
 
+	typeRule := -1
+
+	for _, idx := range ruleIdxs {
+		r := &s.cfg.Rules[idx]
+		if r.FileBinding == "type" && !s.astCheckIsRuleIgnored(rel, r.Ignore) {
+			typeRule = idx
+
+			break
+		}
+	}
+
+	var fileTypes map[string]bool
+
+	if typeRule >= 0 {
+		fileTypes = s.astCheckBindTypesToFile(fset, file, rel, typeRule, rep)
+	}
+
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok {
@@ -275,6 +292,12 @@ func (s *Service) astCheckBindToFile(
 		}
 
 		if s.astCheckIsExcludedByRules(fn.Name.Name, ruleIdxs) {
+			continue
+		}
+
+		if typeRule >= 0 && fn.Recv != nil {
+			s.astCheckBindReceiverToFile(fset, fn, rel, typeRule, fileTypes, rep)
+
 			continue
 		}
 
@@ -491,4 +514,98 @@ func (*Service) astCheckIsRuleIgnored(rel string, ignore []string) bool {
 	}
 
 	return false
+}
+
+// astCheckBindTypesToFile collects actual type names, including excluded types,
+// so receiver ownership is checked independently of declaration exemptions.
+func (s *Service) astCheckBindTypesToFile(
+	fset *token.FileSet,
+	file *ast.File,
+	rel string,
+	ruleIdx int,
+	rep *dto.Report,
+) map[string]bool {
+	r := &s.cfg.Rules[ruleIdx]
+	fileName := filepath.Base(rel)
+	normFile := helpers.Normalize(fileName)
+	fileTypes := make(map[string]bool)
+
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.TYPE {
+			continue
+		}
+
+		for _, spec := range gen.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+
+			fileTypes[ts.Name.Name] = true
+
+			if helpers.Normalize(ts.Name.Name) == normFile || s.astCheckIsExcluded(ts.Name.Name, r.ExcludeTypes) {
+				continue
+			}
+
+			pos := fset.Position(ts.Pos())
+
+			rep.Violations = append(rep.Violations, dto.Violation{
+				Check: "type-file-binding",
+				Rule:  r.Path,
+				Path:  rel,
+				Pos:   fmt.Sprintf("%s:%d:%d", rel, pos.Line, pos.Column),
+				Message: fmt.Sprintf("type %q must live in file named after it (e.g. %q), found in %q",
+					ts.Name.Name, s.astCheckSuggestFileName(ts.Name.Name), fileName),
+			})
+		}
+	}
+
+	return fileTypes
+}
+
+func (s *Service) astCheckBindReceiverToFile(
+	fset *token.FileSet,
+	fn *ast.FuncDecl,
+	rel string,
+	ruleIdx int,
+	fileTypes map[string]bool,
+	rep *dto.Report,
+) {
+	receiver := s.astCheckReceiverName(fn.Recv.List[0].Type)
+	fileName := filepath.Base(rel)
+
+	if helpers.Normalize(receiver) == helpers.Normalize(fileName) && fileTypes[receiver] {
+		return
+	}
+
+	pos := fset.Position(fn.Pos())
+
+	rep.Violations = append(rep.Violations, dto.Violation{
+		Check: "method-file-binding",
+		Rule:  s.cfg.Rules[ruleIdx].Path,
+		Path:  rel,
+		Pos:   fmt.Sprintf("%s:%d:%d", rel, pos.Line, pos.Column),
+		Message: fmt.Sprintf("method %q with receiver %q must live with its type declaration in a file named after the type (e.g. %q), found in %q",
+			fn.Name.Name, receiver, s.astCheckSuggestFileName(receiver), fileName),
+	})
+}
+
+func (*Service) astCheckReceiverName(expr ast.Expr) string {
+	for {
+		switch t := expr.(type) {
+		case *ast.Ident:
+			return t.Name
+		case *ast.StarExpr:
+			expr = t.X
+		case *ast.IndexExpr:
+			expr = t.X
+		case *ast.IndexListExpr:
+			expr = t.X
+		case *ast.ParenExpr:
+			expr = t.X
+		default:
+			return ""
+		}
+	}
 }

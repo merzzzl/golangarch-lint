@@ -12,6 +12,7 @@ import (
 // Validate checks the whole config: globs, enum values and rule path overlaps.
 func (c *Config) Validate() error {
 	validModes := []string{"any", "flat", "subdirs-only"}
+	validFileBindings := []string{"name", "type"}
 	validAllowModes := []string{"all", "local", "exported", "none"}
 
 	validateGlob := func(pattern string) error {
@@ -53,6 +54,10 @@ func (c *Config) Validate() error {
 
 		if r.Mode != "" && !slices.Contains(validModes, r.Mode) {
 			return fmt.Errorf("rule %q: %w: %q, must be one of: %v", r.Path, ErrInvalidMode, r.Mode, validModes)
+		}
+
+		if r.FileBinding != "" && !slices.Contains(validFileBindings, r.FileBinding) {
+			return fmt.Errorf("rule %q: %w: %q, must be one of: %v", r.Path, ErrInvalidFileBinding, r.FileBinding, validFileBindings)
 		}
 
 		allowFields := map[string]string{

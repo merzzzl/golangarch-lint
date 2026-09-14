@@ -7,6 +7,7 @@ type Config struct {
 		Path            string   `yaml:"path"`
 		Ignore          []string `yaml:"ignore"`
 		Mode            string   `yaml:"mode"`
+		FileBinding     string   `yaml:"file-binding"`
 		AllowTypes      string   `yaml:"allow-types"`
 		AllowVars       string   `yaml:"allow-vars"`
 		AllowFuncs      string   `yaml:"allow-funcs"`
