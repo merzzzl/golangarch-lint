@@ -1,46 +1,36 @@
 # golangarch-lint
 
-A self-contained architecture linter for Go. Deterministic, machine-readable, built for CI and AI-agent workflows.
+Architecture checks for Go: file layout, declarations, signatures, imports and actual call targets, including interface implementations.
 
-This repository lints itself: [`.golangarch.yml`](.golangarch.yml) is a complete real-world config, the source tree is a living example of the conventions it enforces, and [`GOLANGARCH.md`](GOLANGARCH.md) is the instruction generated from it.
+## Quick start
 
-## Install
-
-```bash
+```sh
 go install github.com/merzzzl/golangarch-lint/cmd/golangarch-lint@latest
+golangarch-lint lint .
 ```
 
-## Usage
+Create `.golangarch.yml` in the project root:
 
-```bash
-golangarch-lint lint [-config path] [-format text|json] [root]   # run checks
-golangarch-lint docs [-config path] [root]                       # generate GOLANGARCH.md
+```yaml
+version: 2
+rules:
+  - scope:
+      path: "**"
+    imports: []
 ```
 
-Exit codes: `0` — clean, `1` — violations found, `2` — broken config or runtime error.
+This starting policy permits standard-library dependencies and calls within the current package. Add your internal and external dependencies to `imports` before using it in an existing project.
 
-## Config
+## Documentation
 
-One `rules` array in `.golangarch.yml`. Every field is optional except `path`. `$module` expands to the module path from `go.mod`. Full reference by example — [this project's config](.golangarch.yml).
+- [Usage and CLI](docs/usage.md)
+- [Configuration and shortcuts](docs/configuration.md)
+- [Scope](docs/scope.md)
+- [Layout](docs/layout.md)
+- [Declarations](docs/declarations.md)
+- [Imports and call analysis](docs/imports.md)
+- [Signatures](docs/signatures.md)
+- [Migration from v1](docs/migration.md)
+- [Internal architecture](docs/architecture.md)
 
-| Field | Meaning |
-|-------|---------|
-| `path` | glob over directories or file paths; file rules win over directory rules |
-| `ignore` | per-rule path globs to skip |
-| `file-binding` | file organization: `name` (default), `type` (type and its receiver methods together) |
-| `mode` | directory shape: `any`, `flat` (no subdirs), `subdirs-only` (no files) |
-| `allow-types` / `allow-vars` / `allow-funcs` | which declarations may exist: `all` (default), `local`, `exported`, `none` |
-| `exclude-types` / `exclude-vars` / `exclude-funcs` | name globs exempt from all AST checks |
-| `require-receiver` | functions must be methods: `all`, `local`, `exported`, `none` (default) |
-| `exported.inputs` / `exported.outputs` | allowed types in exported signatures; stdlib always passes |
-| `modules` | import whitelist, full paths; omitted = unrestricted, `[]` = stdlib only |
-
-Type patterns in `exported`: exact `pkg.Name`, whole package `pkg`, one level `pkg/*`, any depth `pkg/**`.
-
-Besides the rules, a few checks are always on: every function must live in a file named after it, package names must equal their directory names, and every directory with `.go` files must be covered by a rule.
-
-Config validation fails fast (exit `2`): overlapping rule paths, unknown enum values, invalid globs.
-
-## Docs for AI agents
-
-`golangarch-lint docs` renders the config into [`GOLANGARCH.md`](GOLANGARCH.md) — a plain-language instruction an AI agent can follow when writing code in the repository. Point your agent instructions (e.g. `CLAUDE.md`) at it.
+The project checks itself with [.golangarch.yml](.golangarch.yml). [GOLANGARCH.md](GOLANGARCH.md) contains generated natural-language instructions for AI agents.

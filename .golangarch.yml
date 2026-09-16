@@ -1,104 +1,351 @@
-version: 1
-
-ignore:
-  - "**/*_test.go"
-
+version: 2
 rules:
-  - path: "cmd/golangarch-lint"
-    mode: flat
-    allow-funcs: none
-    allow-types: local
-    allow-vars: local
-    exclude-funcs: ["main"]
-    modules:
-      - "$module/internal/dto"
-      - "$module/internal/config"
-      - "$module/internal/controller"
+  - scope:
+      path: cmd/golangarch-lint
+    layout:
+      directories:
+        flat: true
+        subdirs: false
+      filenames: [main.go]
+      binding: {}
+    declarations:
+      types: []
+      vars:
+        exported: []
+        unexported: ["*"]
+      consts:
+        exported: []
+        unexported: ["*"]
+      funcs:
+        exported: []
+        unexported: [main]
+    imports:
+      - $module/internal/config
+      - $module/internal/controller
+      - $module/internal/dto
+    signatures:
+      unexported:
+        receiver: false
+        inputs: []
+        outputs: []
 
-  - path: "internal/dto"
-    mode: flat
-    allow-funcs: none
-    allow-types: exported
-    allow-vars: none
-    modules: []
+  - scope:
+      path: internal/dto
+    layout:
+      directories:
+        flat: true
+        subdirs: false
+      binding:
+        name: true
+        receiver: false
+    declarations:
+      types:
+        exported: ["*"]
+        unexported: []
+      vars: []
+      consts: []
+      funcs: []
+    imports:
+      - golang.org/x/tools/go/packages
 
-  - path: "internal/helpers"
-    mode: flat
-    allow-types: none
-    allow-vars: local
-    allow-funcs: exported
-    modules: []
+  - scope:
+      path: internal/helpers
+    layout:
+      directories:
+        flat: true
+        subdirs: false
+      binding:
+        name: true
+        receiver: false
+    declarations:
+      types: []
+      vars:
+        exported: []
+        unexported: ["*"]
+      consts:
+        exported: []
+        unexported: ["*"]
+      funcs:
+        exported: ["*"]
+        unexported: []
+    imports: []
+    signatures:
+      exported:
+        receiver: false
+        inputs: []
+        outputs: []
 
-  - path: "internal/config"
-    allow-types: none
-    allow-vars: none
-    allow-funcs: none
-    require-receiver: all
-    exclude-funcs: ["Load", "Validate"]
-    mode: flat
-    modules:
-      - "$module/internal/helpers"
-      - "gopkg.in/yaml.v3"
+  - scope:
+      path: internal/config
+    layout:
+      directories:
+        flat: true
+        subdirs: false
+      binding:
+        name: false
+        receiver: true
+    declarations:
+      types:
+        exported: ["*"]
+        unexported: []
+      vars: []
+      consts: []
+      funcs: ["*"]
+    imports:
+      - gopkg.in/yaml.v3
+      - $module/internal/migrations
+      - $module/internal/helpers
+    signatures:
+      exported:
+        receiver: true
+        inputs: [$module/internal/config]
+        outputs: [$module/internal/config]
+      unexported:
+        receiver: true
+        inputs: [$module/internal/config]
+        outputs: [$module/internal/config]
 
-  - path: "internal/config/config.go"
-    exclude-types: ["Config"]
-    modules: []
+  - scope:
+      path: internal/config/package.go
+    layout:
+      binding: {}
+    declarations:
+      types: []
+      vars:
+        exported: ["Err*"]
+        unexported: []
+      consts: []
+      funcs:
+        exported: [Load]
+        unexported: []
+    imports:
+      - $module/internal/helpers
+    signatures:
+      exported:
+        receiver: false
+        inputs: []
+        outputs: [$module/internal/config]
 
-  - path: "internal/config/errors.go"
-    exclude-vars: ["Err*"]
-    modules: []
+  - scope:
+      path: internal/controller
+    layout:
+      directories:
+        flat: true
+        subdirs: false
+      binding:
+        name: false
+        receiver: true
+    declarations:
+      types:
+        exported: [Controller]
+        unexported: []
+      vars: []
+      consts: []
+      funcs:
+        exported: [Lint, Docs]
+        unexported: []
+    imports:
+      - $module/internal/config
+      - $module/internal/dto
+      - $module/internal/services/*
+      - golang.org/x/tools/go/packages
+      - $module/internal/helpers
+    signatures:
+      exported:
+        receiver: true
+        inputs:
+          - $module/internal/config
+          - $module/internal/dto
+        outputs:
+          - $module/internal/dto
+      unexported:
+        receiver: true
+        inputs:
+          - $module/internal/config
+          - $module/internal/dto
+          - $module/internal/services/*
+          - golang.org/x/tools/go/packages
+        outputs:
+          - $module/internal/dto
+          - $module/internal/services/*
+          - golang.org/x/tools/go/packages
 
-  - path: "internal/controller"
-    mode: flat
-    allow-types: none
-    allow-vars: none
-    allow-funcs: exported
-    require-receiver: all
-    modules:
-      - "$module/internal/dto"
+  - scope:
+      path: internal/controller/package.go
+    layout:
+      binding: {}
+    declarations:
+      types: []
+      vars:
+        exported: ["Err*"]
+        unexported: []
+      consts: []
+      funcs:
+        exported: [New]
+        unexported: []
+    imports:
+      - $module/internal/config
+      - $module/internal/dto
+      - $module/internal/services/*
+      - $module/internal/helpers
+    signatures:
+      exported:
+        receiver: false
+        inputs:
+          - $module/internal/config
+          - $module/internal/dto
+        outputs:
+          - $module/internal/controller
 
-  - path: "internal/controller/package.go"
-    allow-types: local
-    allow-vars: local
-    allow-funcs: local
-    exclude-types: ["Controller"]
-    exclude-vars: ["Err*"]
-    exclude-funcs: ["New"]
-    exported:
-      inputs: ["$module/internal/dto", "$module/internal/config"]
-      outputs: []
-    modules:
-      - "$module/internal/dto"
-      - "$module/internal/config"
-      - "$module/internal/services/**"
+  - scope:
+      path: internal/services
+      ignore:
+        - "**/*_test.go"
+    layout:
+      directories:
+        flat: false
+        subdirs: true
+      binding:
+        name: true
+        receiver: false
 
-  - path: "internal/services"
-    mode: subdirs-only
+  - scope:
+      path: internal/services/*
+      ignore:
+        - "**/*_test.go"
+    layout:
+      filenames: [package.go, run.go]
+      directories:
+        flat: true
+        subdirs: false
+      binding: {}
+    declarations:
+      types: []
+      vars: []
+      consts: []
+    imports:
+      - $module/internal/dto
+      - $module/internal/helpers
+      - $module/internal/config
+      - gopkg.in/yaml.v3
+      - golang.org/x/tools/**
+    signatures:
+      exported:
+        receiver: true
+        inputs:
+          - $module/internal/dto
+        outputs:
+          - $module/internal/dto
+      unexported:
+        receiver: true
 
-  - path: "internal/services/*"
-    mode: flat
-    allow-types: none
-    allow-vars: none
-    allow-funcs: all
-    require-receiver: all
-    exported:
-      inputs: ["$module/internal/dto"]
-      outputs: ["$module/internal/dto"]
-    modules:
-      - "$module/internal/dto"
-      - "$module/internal/helpers"
-      - "golang.org/x/tools/**"
+  - scope:
+      path: internal/services/*/package.go
+    layout:
+      binding: {}
+    declarations:
+      types:
+        exported: [Service]
+        unexported: []
+      vars:
+        exported: ["Err*"]
+        unexported: []
+      consts: []
+      funcs:
+        exported: [New]
+        unexported: []
+    imports:
+      - $module/internal/config
+      - $module/internal/dto
+      - $module/internal/helpers
+    signatures:
+      exported:
+        receiver: false
+        inputs:
+          - $module/internal/config
+          - $module/internal/dto
+        outputs:
+          - $module/internal/services/*
 
-  - path: "internal/services/*/package.go"
-    allow-types: local
-    allow-vars: local
-    allow-funcs: local
-    exclude-types: ["Service"]
-    exclude-vars: ["Err*"]
-    exclude-funcs: ["New"]
-    exported:
-      inputs: ["$module/internal/dto", "$module/internal/config"]
-      outputs: []
-    modules:
-      - "$module/internal/dto"
-      - "$module/internal/config"
+  - scope:
+      path: internal/services/*/run.go
+    layout:
+      binding: {}
+    declarations:
+      types: []
+      vars: []
+      consts: []
+      funcs:
+        exported: [Run]
+        unexported: ["*"]
+    imports:
+      - $module/internal/config
+      - $module/internal/dto
+      - $module/internal/helpers
+      - golang.org/x/tools/**
+    signatures:
+      exported:
+        receiver: true
+        inputs: [$module/internal/dto]
+        outputs: [$module/internal/dto]
+      unexported:
+        receiver: true
+        inputs:
+          - $module/internal/config
+          - $module/internal/dto
+          - golang.org/x/tools/**
+        outputs:
+          - $module/internal/dto
+          - golang.org/x/tools/**
+
+  - scope:
+      path: internal/migrations
+    layout:
+      directories:
+        flat: true
+        subdirs: false
+      filenames:
+        - package.go
+        - "v[0-9]*.go"
+      binding:
+        name: false
+        receiver: true
+    declarations:
+      types:
+        exported: ["V[0-9]*"]
+        unexported: []
+      vars: []
+      consts: []
+      funcs:
+        exported: [Migrate]
+        unexported: ["*"]
+    imports: [gopkg.in/yaml.v3]
+    signatures:
+      exported:
+        receiver: true
+        inputs: []
+        outputs: []
+      unexported:
+        receiver: true
+        inputs: [$module/internal/migrations]
+        outputs: [$module/internal/migrations]
+
+  - scope:
+      path: internal/migrations/package.go
+    layout:
+      binding: {}
+    declarations:
+      types: []
+      vars:
+        exported: ["Err*"]
+        unexported: []
+      consts: []
+      funcs:
+        exported: [Migrate]
+        unexported: []
+    imports: [gopkg.in/yaml.v3]
+    signatures:
+      exported:
+        receiver: false
+        inputs: []
+        outputs: []

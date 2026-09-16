@@ -1,6 +1,6 @@
 BINARY := golangarch-lint
 
-.PHONY: build install lint check docs clean
+.PHONY: build install lint clean
 
 build:
 	go build -o $(BINARY) ./cmd/golangarch-lint
@@ -11,11 +11,7 @@ install:
 lint:
 	go vet ./...
 	golangci-lint run ./...
-
-check: build
 	./$(BINARY) lint .
-
-docs: build
 	./$(BINARY) docs .
 
 clean:
